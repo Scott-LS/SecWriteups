@@ -1,4 +1,29 @@
+                                                                                                    CYBER DEFENDERS
+                                                                                                    ---------------
+
+                                                                                                    
+
+                                                                                                    XXE INFILTRATION
+                                                                                                          
+                                                                                                      -  Scott L
+
+
+
+
+
+
+
 --'Analyze PCAP data using Wireshark to identify XXE vulnerabilities, extract compromised credentials, and detect web shell uploads for persistence.'--
+
+
+
+---------------------
+Learn more about XXE as I did at the video linked below:
+
+https://www.youtube.com/watch?v=gjm6VHZa_8s&t=426s
+
+Courtesy of 'PwnFunction' and John Hammond.
+---------------------
 
 
 
@@ -20,5 +45,90 @@ At this point, you can identify the Highest Port number as 3306.
 
 
 ------------------
-Question 2)
+Question 2) "By identifying the vulnerable PHP script, security teams can directly address and mitigate the vulnerability. What's the complete URI of the PHP script vulnerable to XXE Injection?"
 ------------------
+
+A simple:
+
+http.request.uri == ".php"
+
+Pulls the list of php requests made during the PCAP. Here we can see the attacker probing a whole host of random URI's, likely a dictionary attack. Following the dictionary attack, we see the attacker specifically target 
+"/review/upload.php". The HTTP code 200 Okay is received. This URI has been identified as present. The attacker attempts a POST request which is successful.
+
+Simultaneously the attacker is attempting an XXE injection. 
+
+
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<foo>
+    &xxe;
+</foo>
+
+
+As seen above, the attacker POSTs an in band XXE injection. The variable/Entity 'xxe' is defined as the contents of system file 'passwd'. 
+
+Although a 200 reponse is returned, the file was not outputted. This does mean however that the XML parser is willing to parse the in band files.
+
+
+----------------
+Question 3) "To construct the attack timeline and determine the initial point of compromise. What's the name of the first malicious XML file uploaded by the attacker?"
+----------------
+
+The first file uploaded is "TheGreatGatsby.xml". The attacker includes this in the first POST script. I would assume that this 'Review' is created publicly, thus the attacker is 
+trying to make their file look legitimate. If that is not the case, then it is simply to keep the file under the radar in the database.
+
+
+---------------
+Question 4) "Understanding which sensitive files were accessed helps evaluate the breach's potential impact. What's the name of the web app configuration file the attacker read?"
+---------------
+
+There were several attempts at this XXE Injection. Each time, the attacker was targetting a different in band file. One of the targetted files was the "config.php" file. 
+
+The parser outputted the full file contents of the system config. Continued in Question 5...
+
+
+--------------
+Question 5) "To assess the scope of the breach, what is the password for the compromised database user?"
+--------------
+
+Within the contents of the config file were the login details for a user. The password shown was "Winter2024".
+
+The attacker goes on to use this, see Question 6...
+
+-------------
+Question 6) "After stealing the credentials from the config file, the attacker authenticates to the MySQL service on the victim. Using the Wireshark filter mysql.login_request, what is the timestamp (UTC) of the attacker's first MySQL login attempt?"
+-------------
+
+After filtering for "mysql.login_request". We are met with a series of login attempts. 
+
+The login attempts shown are only attacker side requests, we cannot yet see the server responses. Because of this, I noted the frame numbers and found their corresponding responses in the TCP stream. 
+
+There were some attempts around 11:47AM, but these were fruitless, and no subsequent application data traffic was seen after this. Additionally, I had a screenshot of the config.php compromise, and the timestamp was later than this.
+Therefore at the time of these attempts, the attacker did not have credentials yet. 
+
+Thus, the next attempts at 12:08 and 12:16 were made with the stolen credentials. The first of which being 12:08PM.
+
+------------
+Question 7) "To eliminate the threat and prevent further unauthorized access, can you identify the name of the web shell that the attacker uploaded for remote code execution and persistence?"
+------------
+
+Earlier on in the challenge, I noticed some GET requests that had bash commands in the php parameters. I made a mental note of this as I felt it would become relevant. 
+
+Knowing this, I filtered for all ".php" requests and located these requests again. They were bound for /uploads/booking.php.
+Confused as to what "The name of the webshell" meant in the question, I simply just tried "booking", then "booking.php". The name the question was looking for is booking.php. 
+
+The attacker had uploaded booking.php and was running "cmd" parameters locally on the machine from there.
+
+------------------------------------------------------------------------------------------------------------------------
+
+                                                SUMMARY
+
+------------------------------------------------------------------------------------------------------------------------
+
+This challenge featured a PCAP which showed an attackers Enumeration, and eventual exploitation of a web servers poor xml sanitation. 
+
+The attacker utilized XXE Injections to allow the server's XML parsing to read system files.
+
+This lead to the attacker stealing credentials, having system access and gaining persitence via web shell.
+
+------------------------------------------------------------------------------------------------------------------------
