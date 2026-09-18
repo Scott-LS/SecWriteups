@@ -1,0 +1,24 @@
+--'Analyze PCAP data using Wireshark to identify XXE vulnerabilities, extract compromised credentials, and detect web shell uploads for persistence.'--
+
+
+
+
+-------------------
+Question 1) "During the attacker's port scan, what is the highest-numbered TCP port that responded as open on the victim host? (Hint: in a SYN scan, the victim's SYN-ACK source port is the open port.)"
+-------------------
+
+
+This is a case of Filtering for Syn-Ack responses (second TCP handshake response) to the attackers TCP port scan in Wireshark. I used the filter -->
+
+tcp.flags.syn == 1 && tcp.flags.ack == 1
+
+This pulls all packets containing both the SYN and ACK flags. 
+
+From here you can click the Info header which orders the packets in Ascending order by port number.
+
+At this point, you can identify the Highest Port number as 3306.
+
+
+------------------
+Question 2)
+------------------
